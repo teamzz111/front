@@ -1,5 +1,11 @@
+import UserService from "@/actions/user";
 import Input from "@/components/Input";
+import { useAppDispatch } from "@/store";
+import { login } from "@/store/user";
+import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/router";
 import { SubmitHandler, useForm } from "react-hook-form";
+import toast from "react-hot-toast";
 
 export interface FormLogin {
   email: string;
@@ -7,15 +13,34 @@ export interface FormLogin {
 }
 
 const LoginPage = () => {
+  const dispatch = useAppDispatch();
   const {
     register,
-    watch,
     handleSubmit,
     formState: { errors },
   } = useForm<FormLogin>();
+  const router = useRouter();
+
+  const { mutateAsync } = useMutation({
+    mutationFn: UserService.logIn,
+    onError: () => toast.error("Credenciales inválidas"),
+  });
 
   const onSubmit: SubmitHandler<FormLogin> = (data) => {
-    console.log(data);
+    mutateAsync(data).then((e) => {
+      document.cookie = `token=${e.access_token}; expires=Thu, 01 Jan 2030 00:00:00 UTC; path=/;`;
+
+      dispatch(
+        login({
+          email: e.email,
+          token: e.access_token,
+          id: e.id,
+          name: e.name,
+        })
+      );
+
+      router.replace("/users");
+    });
   };
 
   return (
